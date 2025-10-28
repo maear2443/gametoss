@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>승인/거절 리듬게임</title>
+  <style>
+    :root { color-scheme: dark; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: system-ui, -apple-system, "Noto Sans KR", Roboto, Segoe UI, sans-serif;
+      background: radial-gradient(1200px 600px at 50% -10%, #0b1220 0%, #060913 40%, #03060c 100%);
+      color: #e6edf3;
+    }
+    .wrap { min-height: 100%; display: grid; place-items: center; padding: 16px; gap: 12px; }
+    canvas {
+      width: min(92vw, 480px);
+      aspect-ratio: 2/3;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.05);
+      display: block;
+    }
+    .hud {
+      position: relative;
+      width: min(92vw, 480px);
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 10px;
+      user-select: none;
+    }
+    .score, .combo, .judge { font-weight: 700; letter-spacing: 0.2px; }
+    .score { justify-self: start; }
+    .combo { justify-self: end; }
+    .judge { justify-self: center; min-height: 1.2em; text-shadow: 0 2px 8px rgba(0,0,0,0.45); }
+    .timer {
+      position: absolute;
+      top: -35px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 20px;
+      font-weight: 900;
+      color: #ffea7a;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    }
+    .panel { width: min(92vw, 480px); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; align-items: center; }
+    .panel > * { min-height: 40px; }
+    .panel input[type="number"] {
+      width: 100%; padding: 8px 10px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      color: #e6edf3; font-weight: 700; text-align: center;
+    }
+    .panel button {
+      border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 800; cursor: pointer;
+      background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02));
+      color: #e6edf3;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.06);
+    }
+    .controls { width: min(92vw, 480px); display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn {
+      border: 0; border-radius: 14px; padding: 16px 12px; font-size: 18px; font-weight: 900; letter-spacing: 0.4px; cursor: pointer;
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.06);
+    }
+    .reject { background: linear-gradient(180deg, #c91e3b, #7c0f22); }
+    .approve { background: linear-gradient(180deg, #2b78ff, #1440a6); }
+    .hint { width: min(92vw, 480px); opacity: 0.8; font-size: 13px; line-height: 1.4; text-align: center; }
+    code.kbd {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 2px 6px; border-radius: 6px; font-weight: 800;
+    }
+    .result-screen {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.95);
+      display: none;
+      place-items: center;
+      z-index: 1000;
+    }
+    .result-screen.show { display: grid; }
+    .result-content {
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 20px;
+      padding: 40px;
+      text-align: center;
+      max-width: 400px;
+    }
+    .result-content h1 {
+      font-size: 32px;
+      margin: 0 0 20px 0;
+      color: #ffea7a;
+    }
+    .result-content .stat {
+      font-size: 24px;
+      margin: 10px 0;
+      font-weight: 700;
+    }
+    .result-content button {
+      margin-top: 30px;
+      padding: 15px 40px;
+      font-size: 18px;
+      font-weight: 900;
+      border: 0;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #2b78ff, #1440a6);
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hud">
+      <div class="score">Score: 0</div>
+      <div class="judge"></div>
+      <div class="combo">Combo: 0</div>
+      <div class="timer">1:00</div>
+    </div>
+
+    <canvas id="game" width="480" height="720" aria-label="리듬게임 캔버스"></canvas>
+
+    <div class="panel">
+      <button id="startBtn">Start</button>
+      <label style="display:flex;gap:8px;align-items:center;justify-content:center;">
+        <span style="opacity:.8;font-weight:700;">BPM</span>
+        <input id="bpmInput" type="number" min="40" max="240" step="1" value="120" />
+      </label>
+      <button id="resetBtn">Reset</button>
+    </div>
+
+    <div class="controls">
+      <button class="btn reject" id="rejectBtn">거절 (F)</button>
+      <button class="btn approve" id="approveBtn">승인 (J)</button>
+    </div>
+
+    <div class="hint">
+      타이밍 라인에 블록이 겹칠 때 입력하세요 • 거절=<code class="kbd">F</code> • 승인=<code class="kbd">J</code> • 일시정지/재개=<code class="kbd">Space</code>
+    </div>
+  </div>
+
+  <div class="result-screen" id="resultScreen">
+    <div class="result-content">
+      <h1>게임 종료!</h1>
+      <div class="stat" id="finalScore">Score: 0</div>
+      <div class="stat" id="maxCombo">Max Combo: 0</div>
+      <button id="restartBtn">다시 시작</button>
+    </div>
+  </div>
+
+  <script>
+    // 캔버스/컨텍스트
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d', { alpha: true });
+
+    // DPR 대응
+    function fitCanvas() {
+      const rectW = canvas.clientWidth;
+      const rectH = canvas.clientHeight;
+      const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+      canvas.width = Math.round(rectW * dpr);
+      canvas.height = Math.round(rectH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    new ResizeObserver(fitCanvas).observe(canvas);
+    window.addEventListener('orientationchange', fitCanvas);
+    window.addEventListener('load', fitCanvas);
+
+    // 유틸
+    const W = () => canvas.clientWidth || 480;
+    const H = () => canvas.clientHeight || 720;
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const clamp01 = (x) => Math.max(0, Math.min(1, x));
+
+    // 게임 설정
+    const hitLineOffset = 140;
+    const noteSize = 48;
+    const approachBeats = 4;
+    const spawnProbability = 0.8;
+    const windowsMs = { perfect: 50, great: 100, good: 150 };
+    const GAME_DURATION = 60; // 1분
+
+    // 템포 상태
+    let bpm = 120;
+    let beatDur = 60 / bpm;
+    let approachTime = approachBeats * beatDur;
+
+    // 상태
+    const colors = { red: '#e53950', blue: '#2b78ff' };
+    const notes = [];
+    let running = false;
+    let lastT = 0;
+    let nextBeatT = 0;
+    let score = 0;
+    let combo = 0;
+    let maxCombo = 0;
+    let judgeText = '';
+    let judgeTextTimer = 0;
+    let gameStartTime = 0;
+    let remainingTime = GAME_DURATION;
+
+    // 리액션 상태
+    let hitFlash = { a: 0, color: '#ffffff' };
+    let ring = { a: 0, r: 0, color: '#ffffff' };
+    const particles = [];
+    const floatTexts = [];
+
+    // 리소스
+    let charactersData = null;
+    let playlistData = null;
+    let characterImages = { red: [], blue: [] };
+    let currentAudio = null;
+    let currentSong = null;
+
+    // UI
+    const $score = document.querySelector('.score');
+    const $combo = document.querySelector('.combo');
+    const $judge = document.querySelector('.judge');
+    const $timer = document.querySelector('.timer');
+    const $start = document.getElementById('startBtn');
+    const $reset = document.getElementById('resetBtn');
+    const $bpm = document.getElementById('bpmInput');
+    const $reject = document.getElementById('rejectBtn');
+    const $approve = document.getElementById('approveBtn');
+    const $resultScreen = document.getElementById('resultScreen');
+    const $finalScore = document.getElementById('finalScore');
+    const $maxCombo = document.getElementById('maxCombo');
+    const $restartBtn = document.getElementById('restartBtn');
+
+    // JSON 로딩
+    async function loadResources() {
+      try {
+        const [charactersRes, playlistRes] = await Promise.all([
+          fetch('assets/images/characters.json'),
+          fetch('assets/music/playlist.json')
+        ]);
+        charactersData = await charactersRes.json();
+        playlistData = await playlistRes.json();
+
+        // 이미지 프리로드
+        await preloadImages();
+
+        console.log('Resources loaded successfully');
+      } catch (error) {
+        console.error('Failed to load resources:', error);
+      }
+    }
+
+    async function preloadImages() {
+      const loadImage = (src) => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = () => {
+            console.warn(`Failed to load image: ${src}, using fallback`);
+            resolve(null);
+          };
+          img.src = src;
+        });
+      };
+
+      if (charactersData) {
+        const redPromises = charactersData.red.map(file =>
+          loadImage(`assets/images/red/${file}`)
+        );
+        const bluePromises = charactersData.blue.map(file =>
+          loadImage(`assets/images/blue/${file}`)
+        );
+
+        characterImages.red = await Promise.all(redPromises);
+        characterImages.blue = await Promise.all(bluePromises);
+      }
+    }
+
+    function selectRandomSong() {
+      if (!playlistData || !playlistData.songs || playlistData.songs.length === 0) {
+        console.warn('No songs available, using default BPM');
+        return;
+      }
+
+      const randomIndex = Math.floor(Math.random() * playlistData.songs.length);
+      currentSong = playlistData.songs[randomIndex];
+
+      // BPM 자동 적용
+      updateTempo(currentSong.bpm);
+      $bpm.value = currentSong.bpm;
+
+      // 음악 로드
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+      }
+
+      currentAudio = new Audio(`assets/music/${currentSong.file}`);
+      currentAudio.volume = 0.5;
+      currentAudio.onerror = () => {
+        console.warn(`Failed to load audio: ${currentSong.file}`);
+      };
+
+      console.log(`Selected song: ${currentSong.name} (${currentSong.bpm} BPM)`);
+    }
+
+    function getRandomCharacterImage(color) {
+      const images = characterImages[color];
+      if (!images || images.length === 0) return null;
+
+      const validImages = images.filter(img => img !== null);
+      if (validImages.length === 0) return null;
+
+      const randomIndex = Math.floor(Math.random() * validImages.length);
+      return validImages[randomIndex];
+    }
+
+    function updateTempo(newBpm) {
+      bpm = Math.max(40, Math.min(240, Math.round(newBpm || bpm)));
+      beatDur = 60 / bpm;
+      approachTime = approachBeats * beatDur;
+    }
+
+    $bpm.addEventListener('change', () => updateTempo(parseFloat($bpm.value)));
+
+    function resetGame() {
+      notes.length = 0;
+      particles.length = 0;
+      floatTexts.length = 0;
+      score = 0;
+      combo = 0;
+      maxCombo = 0;
+      judgeText = '';
+      judgeTextTimer = 0;
+      hitFlash.a = 0; ring.a = 0; ring.r = 0;
+      remainingTime = GAME_DURATION;
+      gameStartTime = 0;
+
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+      }
+
+      selectRandomSong();
+      updateTempo(parseFloat($bpm.value));
+      draw(0);
+      syncHUD();
+      $resultScreen.classList.remove('show');
+    }
+
+    function startGame() {
+      if (running) return;
+      running = true;
+      lastT = 0;
+      nextBeatT = 0;
+      gameStartTime = 0;
+
+      if (currentAudio) {
+        currentAudio.play().catch(e => console.warn('Audio play failed:', e));
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    function stopGame() {
+      running = false;
+      if (currentAudio) {
+        currentAudio.pause();
+      }
+    }
+
+    function endGame() {
+      stopGame();
+      $finalScore.textContent = `Score: ${score}`;
+      $maxCombo.textContent = `Max Combo: ${maxCombo}`;
+      $resultScreen.classList.add('show');
+    }
+
+    function trySpawn(now) {
+      if (Math.random() <= spawnProbability) {
+        const color = Math.random() < 0.5 ? 'red' : 'blue';
+        const hitT = now + approachTime;
+        const spawnT = now;
+        const characterImg = getRandomCharacterImage(color);
+        notes.push({ color, spawnT, hitT, hit: false, judged: false, result: null, characterImg });
+      }
+    }
+
+    function setJudge(text, color) {
+      judgeText = text;
+      judgeTextTimer = 0.75;
+      $judge.style.color = color || '#fff';
+    }
+
+    function triggerHitFX(result, noteColor, addScore) {
+      const w = W(), h = H(), hitY = h - hitLineOffset, laneX = w * 0.5;
+      hitFlash.a = 0.6;
+      hitFlash.color = noteColor === 'red' ? 'rgba(229,57,80,1)' : 'rgba(43,120,255,1)';
+      ring.a = 1.0; ring.r = 0; ring.color = hitFlash.color;
+
+      const count = result === 'PERFECT' ? 24 : result === 'GREAT' ? 18 : 12;
+      for (let i = 0; i < count; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 180 + Math.random() * 200;
+        particles.push({
+          x: laneX, y: hitY,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd - 120,
+          life: 0.7 + Math.random() * 0.5,
+          a: 1,
+          color: noteColor === 'red' ? 'rgba(229,57,80,1)' : 'rgba(43,120,255,1)'
+        });
+      }
+
+      floatTexts.push({
+        x: laneX, y: hitY - 10,
+        vy: -60,
+        life: 0.85, a: 1,
+        text: `${result} +${addScore}`,
+        color: result === 'PERFECT' ? '#ffea7a' : result === 'GREAT' ? '#9cffd7' : '#b0c7ff',
+        size: result === 'PERFECT' ? 22 : 18
+      });
+    }
+
+    function triggerMissFX() {
+      const w = W(), h = H(), hitY = h - hitLineOffset, laneX = w * 0.5;
+      hitFlash.a = 0.45;
+      hitFlash.color = 'rgba(160,160,160,1)';
+      ring.a = 0.6; ring.r = 0; ring.color = 'rgba(160,160,160,1)';
+      floatTexts.push({ x: laneX, y: hitY - 6, vy: -40, life: 0.6, a: 1, text: `MISS`, color: '#cccccc', size: 16 });
+    }
+
+    function handleAction(action, now) {
+      let best = null; let bestAbs = Infinity;
+      for (const n of notes) {
+        if (n.judged) continue;
+        const dt = (now - n.hitT) * 1000;
+        const abs = Math.abs(dt);
+        if (abs < bestAbs) { best = n; bestAbs = abs; }
+      }
+      if (!best) {
+        setJudge('MISS', '#999');
+        combo = 0;
+        triggerMissFX();
+        syncHUD();
+        return;
+      }
+
+      const correct = (best.color === 'blue' && action === 'approve') || (best.color === 'red' && action === 'reject');
+
+      let result = 'MISS'; let add = 0; let color = '#aaa';
+      if (correct) {
+        if (bestAbs <= windowsMs.perfect) { result = 'PERFECT'; add = 300; color = '#ffea7a'; }
+        else if (bestAbs <= windowsMs.great) { result = 'GREAT'; add = 200; color = '#9cffd7'; }
+        else if (bestAbs <= windowsMs.good) { result = 'GOOD'; add = 100; color = '#b0c7ff'; }
+      }
+
+      if (result === 'MISS') {
+        combo = 0;
+        setJudge('MISS', '#999');
+        triggerMissFX();
+      } else {
+        best.hit = true;
+        best.judged = true;
+        best.result = result;
+        combo += 1;
+        maxCombo = Math.max(maxCombo, combo);
+        score += add;
+        setJudge(result, color);
+        triggerHitFX(result, best.color, add);
+      }
+      syncHUD();
+    }
+
+    // 입력
+    window.addEventListener('keydown', (e) => {
+      if (e.repeat) return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        running ? stopGame() : startGame();
+      } else if (e.code === 'KeyF') {
+        if (running) handleAction('reject', _nowSec);
+      } else if (e.code === 'KeyJ') {
+        if (running) handleAction('approve', _nowSec);
+      }
+    });
+    $reject.addEventListener('click', () => { if (running) handleAction('reject', _nowSec); });
+    $approve.addEventListener('click', () => { if (running) handleAction('approve', _nowSec); });
+    $start.addEventListener('click', () => { startGame(); });
+    $reset.addEventListener('click', () => { resetGame(); });
+    $restartBtn.addEventListener('click', () => { resetGame(); });
+
+    // 루프
+    let _nowSec = 0;
+    function loop(ts) {
+      if (!running) return;
+      const now = ts / 1000;
+      _nowSec = now;
+      if (lastT === 0) {
+        lastT = now;
+        nextBeatT = now + beatDur;
+        gameStartTime = now;
+      }
+      const dt = Math.min(0.033, Math.max(0, now - lastT));
+      lastT = now;
+
+      // 타이머 업데이트
+      const elapsed = now - gameStartTime;
+      remainingTime = Math.max(0, GAME_DURATION - elapsed);
+
+      if (remainingTime <= 0) {
+        endGame();
+        return;
+      }
+
+      // 박자 스폰 스케줄
+      while (now >= nextBeatT) { trySpawn(nextBeatT); nextBeatT += beatDur; }
+
+      // 판정 타이밍 초과 → MISS
+      for (const n of notes) {
+        if (!n.judged && now - n.hitT > windowsMs.good / 1000) {
+          n.judged = true; n.result = 'MISS'; combo = 0; setJudge('MISS', '#999'); triggerMissFX();
+        }
+      }
+
+      // 오래된 노트 정리
+      for (let i = notes.length - 1; i >= 0; i--) {
+        if (now - notes[i].hitT > 1.5) notes.splice(i, 1);
+      }
+
+      // HUD 판정 텍스트 수명
+      if (judgeTextTimer > 0) { judgeTextTimer -= dt; if (judgeTextTimer <= 0) judgeText = ''; }
+
+      // 리액션 업데이트
+      if (hitFlash.a > 0) hitFlash.a = Math.max(0, hitFlash.a - dt * 2.5);
+      if (ring.a > 0) { ring.r += dt * 260; ring.a = Math.max(0, ring.a - dt * 2.0); }
+
+      // 파티클 업데이트
+      const gravity = 900;
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life -= dt; p.a = Math.max(0, p.life / 1.0);
+        p.vy += gravity * dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+
+      // 떠오르는 텍스트
+      for (let i = floatTexts.length - 1; i >= 0; i--) {
+        const t = floatTexts[i];
+        t.life -= dt; t.a = Math.max(0, t.life / 0.85);
+        t.y += t.vy * dt;
+        if (t.life <= 0) floatTexts.splice(i, 1);
+      }
+
+      draw(now);
+      syncHUD();
+      requestAnimationFrame(loop);
+    }
+
+    function syncHUD() {
+      $score.textContent = `Score: ${score}`;
+      $combo.textContent = `Combo: ${combo}`;
+      $judge.textContent = judgeText;
+
+      const minutes = Math.floor(remainingTime / 60);
+      const seconds = Math.floor(remainingTime % 60);
+      $timer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    function draw(now) {
+      fitCanvas();
+      const w = W(), h = H(), hitY = h - hitLineOffset, laneX = w * 0.5;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // 배경
+      const g = ctx.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, 'rgba(255,255,255,0.03)');
+      g.addColorStop(1, 'rgba(255,255,255,0.00)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+
+      // 라인 플래시
+      if (hitFlash.a > 0) {
+        ctx.save();
+        ctx.globalAlpha = hitFlash.a * 0.45;
+        ctx.fillStyle = hitFlash.color;
+        ctx.fillRect(0, hitY - 4, w, 8);
+        ctx.restore();
+      }
+
+      // 판정 라인
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, hitY);
+      ctx.lineTo(w, hitY);
+      ctx.stroke();
+
+      // 타겟 가이드 박스
+      ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+      ctx.lineWidth = 3;
+      roundRectStroke(laneX - noteSize/2 - 8, hitY - noteSize/2 - 8, noteSize + 16, noteSize + 16, 10);
+
+      // 확산 링
+      if (ring.a > 0) {
+        ctx.save();
+        ctx.globalAlpha = ring.a * 0.9;
+        ctx.strokeStyle = ring.color;
+        ctx.lineWidth = 2.5;
+        roundRectStroke(laneX - (noteSize/2 + 8 + ring.r/2), hitY - (noteSize/2 + 8 + ring.r/2), noteSize + 16 + ring.r, noteSize + 16 + ring.r, 14);
+        ctx.restore();
+      }
+
+      // 노트 렌더
+      for (const n of notes) {
+        const t = clamp01((now - n.spawnT) / approachTime);
+        const y = lerp(-noteSize, hitY, t);
+
+        const baseColor = n.color === 'red' ? colors.red : colors.blue;
+        ctx.save();
+
+        const timeToHit = Math.abs((now - n.hitT) * 1000);
+        const pulse = timeToHit < 80 ? 1 + (80 - timeToHit) / 400 : 1;
+        const size = noteSize * pulse;
+
+        // 캐릭터 이미지가 있으면 이미지 렌더링, 없으면 기본 박스
+        if (n.characterImg) {
+          ctx.shadowColor = n.color === 'red' ? 'rgba(229,57,80,0.45)' : 'rgba(43,120,255,0.45)';
+          ctx.shadowBlur = 18;
+
+          // 이미지 크기를 64x48로 설정
+          const imgWidth = 64 * pulse;
+          const imgHeight = 48 * pulse;
+          ctx.drawImage(n.characterImg, laneX - imgWidth/2, y - imgHeight/2, imgWidth, imgHeight);
+        } else {
+          // 글로우
+          ctx.shadowColor = n.color === 'red' ? 'rgba(229,57,80,0.45)' : 'rgba(43,120,255,0.45)';
+          ctx.shadowBlur = 18;
+          ctx.fillStyle = baseColor;
+          roundRectFill(laneX - size/2, y - size/2, size, size, 10);
+
+          // 테두리
+          ctx.shadowBlur = 0;
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+          roundRectStroke(laneX - size/2, y - size/2, size, size, 10);
+        }
+
+        // 판정된 노트 페이드
+        if (n.judged) {
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.globalAlpha = 0.25;
+          if (n.characterImg) {
+            const imgWidth = 64 * pulse;
+            const imgHeight = 48 * pulse;
+            ctx.fillRect(laneX - imgWidth/2, y - imgHeight/2, imgWidth, imgHeight);
+          } else {
+            roundRectFill(laneX - size/2, y - size/2, size, size, 10);
+          }
+        }
+        ctx.restore();
+      }
+
+      // 파티클
+      for (const p of particles) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, p.a));
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 떠오르는 텍스트
+      for (const t of floatTexts) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, t.a));
+        ctx.fillStyle = t.color;
+        ctx.font = `900 ${t.size}px system-ui`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(t.text, t.x, t.y);
+        ctx.restore();
+      }
+    }
+
+    function roundRectFill(x, y, w, h, r) { ctx.beginPath(); roundedPath(x, y, w, h, r); ctx.fill(); }
+    function roundRectStroke(x, y, w, h, r) { ctx.beginPath(); roundedPath(x, y, w, h, r); ctx.stroke(); }
+    function roundedPath(x, y, w, h, r) {
+      const rr = Math.min(r, w / 2, h / 2);
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + w, y, x + w, y + h, rr);
+      ctx.arcTo(x + w, y + h, x, y + h, rr);
+      ctx.arcTo(x, y + h, x, y, rr);
+      ctx.arcTo(x, y, x + w, y, rr);
+      ctx.closePath();
+    }
+
+    // 초기화
+    loadResources().then(() => {
+      resetGame();
+      draw(0);
+    });
+  </script>
+</body>
+</html>

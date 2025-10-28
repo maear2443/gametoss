@@ -1,0 +1,19 @@
+{
+  "songs": [
+    {
+      "name": "곡1",
+      "file": "song1.mp3",
+      "bpm": 120
+    },
+    {
+      "name": "곡2",
+      "file": "song2.mp3",
+      "bpm": 95
+    },
+    {
+      "name": "곡3",
+      "file": "song3.mp3",
+      "bpm": 140
+    }
+  ]
+}
