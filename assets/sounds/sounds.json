@@ -1,0 +1,6 @@
+{
+  "approve_success": "approve_success.wav",
+  "reject_success": "reject_success.wav",
+  "approve_fail": "approve_fail.wav",
+  "reject_fail": "reject_fail.wav"
+}

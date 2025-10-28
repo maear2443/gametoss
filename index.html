@@ -140,7 +140,7 @@
     </div>
 
     <div class="hint">
-      타이밍 라인에 블록이 겹칠 때 입력하세요 • 거절=<code class="kbd">F</code> • 승인=<code class="kbd">J</code> • 일시정지/재개=<code class="kbd">Space</code>
+      안맞는 인형은 망치로 쳐내고, 맞는 인형은 승인하세요 • 거절=<code class="kbd">F</code> • 승인=<code class="kbd">J</code> • 일시정지/재개=<code class="kbd">Space</code>
     </div>
   </div>
 
@@ -213,9 +213,15 @@
     // 리소스
     let charactersData = null;
     let playlistData = null;
+    let soundsData = null;
     let characterImages = { red: [], blue: [] };
+    let soundEffects = {};
     let currentAudio = null;
     let currentSong = null;
+
+    // 망치/기계팔 애니메이션
+    const hammerAnim = { active: false, progress: 0, x: 0, y: 0 }; // 거절용 망치
+    const robotArmAnim = { active: false, progress: 0, x: 0, y: 0 }; // 승인용 기계팔
 
     // UI
     const $score = document.querySelector('.score');
@@ -235,15 +241,20 @@
     // JSON 로딩
     async function loadResources() {
       try {
-        const [charactersRes, playlistRes] = await Promise.all([
+        const [charactersRes, playlistRes, soundsRes] = await Promise.all([
           fetch('assets/images/characters.json'),
-          fetch('assets/music/playlist.json')
+          fetch('assets/music/playlist.json'),
+          fetch('assets/sounds/sounds.json')
         ]);
         charactersData = await charactersRes.json();
         playlistData = await playlistRes.json();
+        soundsData = await soundsRes.json();
 
         // 이미지 프리로드
         await preloadImages();
+
+        // 효과음 프리로드
+        await preloadSounds();
 
         console.log('Resources loaded successfully');
       } catch (error) {
@@ -274,6 +285,39 @@
 
         characterImages.red = await Promise.all(redPromises);
         characterImages.blue = await Promise.all(bluePromises);
+      }
+    }
+
+    async function preloadSounds() {
+      if (!soundsData) return;
+
+      const loadSound = (name, file) => {
+        return new Promise((resolve) => {
+          const audio = new Audio(`assets/sounds/${file}`);
+          audio.volume = 0.3;
+          audio.onerror = () => {
+            console.warn(`Failed to load sound: ${file}`);
+            resolve(null);
+          };
+          audio.oncanplaythrough = () => resolve(audio);
+        });
+      };
+
+      const soundPromises = Object.entries(soundsData).map(([name, file]) =>
+        loadSound(name, file).then(audio => ({ name, audio }))
+      );
+
+      const results = await Promise.all(soundPromises);
+      results.forEach(({ name, audio }) => {
+        if (audio) soundEffects[name] = audio;
+      });
+    }
+
+    function playSound(soundName) {
+      const sound = soundEffects[soundName];
+      if (sound) {
+        sound.currentTime = 0;
+        sound.play().catch(e => console.warn(`Sound play failed: ${soundName}`, e));
       }
     }
 
@@ -448,6 +492,7 @@
       }
 
       const correct = (best.color === 'blue' && action === 'approve') || (best.color === 'red' && action === 'reject');
+      const w = W(), h = H(), hitY = h - hitLineOffset;
 
       let result = 'MISS'; let add = 0; let color = '#aaa';
       if (correct) {
@@ -460,15 +505,44 @@
         combo = 0;
         setJudge('MISS', '#999');
         triggerMissFX();
+
+        // 실패 효과음: 승인을 거절했는지, 거절을 승인했는지에 따라
+        if (best.color === 'blue' && action === 'reject') {
+          playSound('approve_fail'); // 승인을 거절함
+        } else if (best.color === 'red' && action === 'approve') {
+          playSound('reject_fail'); // 거절을 승인함
+        }
       } else {
         best.hit = true;
         best.judged = true;
         best.result = result;
         combo += 1;
         maxCombo = Math.max(maxCombo, combo);
-        score += add;
+
+        // 콤보 보너스: 10콤보마다 10점씩 추가
+        const comboBonus = Math.floor(combo / 10) * 10;
+        const totalAdd = add + comboBonus;
+
+        score += totalAdd;
         setJudge(result, color);
-        triggerHitFX(result, best.color, add);
+        triggerHitFX(result, best.color, totalAdd);
+
+        // 성공 효과음 + 애니메이션
+        if (action === 'approve') {
+          playSound('approve_success');
+          // 기계팔 애니메이션 시작
+          robotArmAnim.active = true;
+          robotArmAnim.progress = 0;
+          robotArmAnim.x = w * 0.5;
+          robotArmAnim.y = hitY;
+        } else {
+          playSound('reject_success');
+          // 망치 애니메이션 시작
+          hammerAnim.active = true;
+          hammerAnim.progress = 0;
+          hammerAnim.x = w * 0.5;
+          hammerAnim.y = hitY;
+        }
       }
       syncHUD();
     }
@@ -555,6 +629,22 @@
         if (t.life <= 0) floatTexts.splice(i, 1);
       }
 
+      // 망치 애니메이션 업데이트
+      if (hammerAnim.active) {
+        hammerAnim.progress += dt * 6; // 빠르게
+        if (hammerAnim.progress >= 1) {
+          hammerAnim.active = false;
+        }
+      }
+
+      // 기계팔 애니메이션 업데이트
+      if (robotArmAnim.active) {
+        robotArmAnim.progress += dt * 4; // 조금 느리게
+        if (robotArmAnim.progress >= 1) {
+          robotArmAnim.active = false;
+        }
+      }
+
       draw(now);
       syncHUD();
       requestAnimationFrame(loop);
@@ -615,10 +705,11 @@
         ctx.restore();
       }
 
-      // 노트 렌더
+      // 노트 렌더 (탑 쌓이는 느낌 - 위에서부터 차곡차곡)
       for (const n of notes) {
         const t = clamp01((now - n.spawnT) / approachTime);
-        const y = lerp(-noteSize, hitY, t);
+        // 시작 위치를 더 위로 (-100) 해서 이미지 잘림 방지
+        const y = lerp(-100, hitY, t);
 
         const baseColor = n.color === 'red' ? colors.red : colors.blue;
         ctx.save();
@@ -687,6 +778,79 @@
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
         ctx.fillText(t.text, t.x, t.y);
+        ctx.restore();
+      }
+
+      // 망치 애니메이션 렌더링 (거절 시)
+      if (hammerAnim.active) {
+        ctx.save();
+        const progress = Math.min(1, hammerAnim.progress);
+        const easeProgress = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+        // 망치 위치 (위에서 아래로 내려찍기)
+        const hammerY = hammerAnim.y - 80 + (easeProgress * 80);
+        const hammerX = hammerAnim.x;
+
+        ctx.globalAlpha = 1 - progress * 0.3;
+
+        // 망치 손잡이
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 8;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(hammerX, hammerY - 30);
+        ctx.lineTo(hammerX, hammerY + 10);
+        ctx.stroke();
+
+        // 망치 머리
+        ctx.fillStyle = '#666';
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 10;
+        roundRectFill(hammerX - 20, hammerY - 50, 40, 20, 4);
+
+        ctx.restore();
+      }
+
+      // 기계팔 애니메이션 렌더링 (승인 시)
+      if (robotArmAnim.active) {
+        ctx.save();
+        const progress = Math.min(1, robotArmAnim.progress);
+
+        // 기계팔 위치 (오른쪽에서 왼쪽으로 잡아가기)
+        const armX = w + 50 - (progress * (w * 0.3 + 50));
+        const armY = robotArmAnim.y;
+
+        ctx.globalAlpha = 1 - progress * 0.5;
+
+        // 기계팔 몸통
+        ctx.strokeStyle = '#2b78ff';
+        ctx.lineWidth = 10;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(w, armY - 20);
+        ctx.lineTo(armX + 30, armY - 20);
+        ctx.stroke();
+
+        // 기계팔 집게
+        ctx.strokeStyle = '#1440a6';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(armX + 30, armY - 30);
+        ctx.lineTo(armX + 20, armY - 10);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(armX + 30, armY - 10);
+        ctx.lineTo(armX + 20, armY - 30);
+        ctx.stroke();
+
+        // 기계팔 관절
+        ctx.fillStyle = '#2b78ff';
+        ctx.shadowColor = 'rgba(43,120,255,0.6)';
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(armX + 30, armY - 20, 8, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.restore();
       }
     }
