@@ -21,7 +21,17 @@
 
 ```
 rhythm-game/
-├── index.html
+├── index.html               # 메인 HTML (간결함)
+├── css/
+│   └── styles.css          # 모든 스타일
+├── js/                      # JavaScript 모듈 (ES6)
+│   ├── main.js             # 📌 진입점 및 초기화
+│   ├── config.js           # ⚙️  게임 설정 상수
+│   ├── resources.js        # 📦 리소스 로딩 (이미지/사운드/음악)
+│   ├── game.js             # 🎮 게임 로직 및 상태
+│   ├── renderer.js         # 🎨 캔버스 렌더링
+│   ├── animations.js       # ✨ 애니메이션 (망치/기계팔/파티클)
+│   └── input.js            # 🎹 입력 처리 (키보드/버튼)
 ├── generate_images.py       # 이미지 생성 스크립트
 ├── generate_sounds.py       # 효과음 생성 스크립트
 └── assets/
@@ -51,6 +61,20 @@ rhythm-game/
         │   └── fox.png
         └── characters.json
 ```
+
+## 🛠️ 코드 구조 (모듈화로 수정 편의성 극대화)
+
+각 파일의 역할이 명확하게 분리되어 있어 **다른 사람도 쉽게 수정 가능**:
+
+| 파일 | 역할 | 수정 예시 |
+|------|------|----------|
+| **config.js** | 게임 설정 값들 | BPM 범위, 판정 윈도우, 점수 조정 |
+| **resources.js** | 이미지/사운드 로딩 | 리소스 경로 변경, 로딩 방식 수정 |
+| **animations.js** | 애니메이션 관리 | 망치 속도, 파티클 개수 조정 |
+| **renderer.js** | 캔버스 렌더링 | 노트 모양, 색상, 이펙트 변경 |
+| **game.js** | 게임 로직 | 판정 시스템, 콤보 계산 수정 |
+| **input.js** | 입력 처리 | 키 바인딩 변경, 터치 입력 추가 |
+| **main.js** | 진입점 | 초기화 순서, 디버그 모드 추가 |
 
 ## 🎵 음악 파일 추가하기
 
