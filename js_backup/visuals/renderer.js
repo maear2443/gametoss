@@ -1,10 +1,11 @@
 /**
  * 🎨 렌더링 시스템
  *
- * 캔버스에 모든 것을 그립니다.
+ * 화면에 모든 것을 그립니다.
+ * 노트, 이펙트, 애니메이션 등!
  */
 
-import { CHARACTER_SPACING, MAX_DPR } from '../config/settings.js';
+import { CHARACTER_SIZE, CHARACTER_SPACING, MAX_DPR } from '../config/settings.js';
 import { effects } from './effects.js';
 import { animations } from './animations.js';
 
@@ -28,6 +29,9 @@ export function initCanvas(canvasElement) {
 
   return { canvas, ctx };
 }
+
+// 별칭
+export const initRenderer = initCanvas;
 
 /**
  * 캔버스 크기 조정
@@ -54,7 +58,7 @@ export function render(characters, currentTime) {
 
   ctx.clearRect(0, 0, w, h);
 
-  // 배경 그라데이션
+  // 배경
   const g = ctx.createLinearGradient(0, 0, 0, h);
   g.addColorStop(0, 'rgba(255,255,255,0.03)');
   g.addColorStop(1, 'rgba(255,255,255,0.00)');
@@ -70,8 +74,8 @@ export function render(characters, currentTime) {
     ctx.restore();
   }
 
-  // 캐릭터들 (세로로 배치)
-  const startY = 100;
+  // 캐릭터들 (한 줄로 배치)
+  const startY = 100; // 시작 Y 위치
   for (let i = 0; i < characters.length; i++) {
     const character = characters[i];
     const y = startY + (i * CHARACTER_SPACING);
@@ -103,35 +107,27 @@ export function render(characters, currentTime) {
     ctx.restore();
   }
 
-  // 망치 애니메이션
+  // 망치
   if (animations.hammer.active) {
     renderHammer(w);
   }
 
-  // 기계팔 애니메이션
+  // 기계팔
   if (animations.robotArm.active) {
     renderRobotArm(w);
   }
 }
 
-/**
- * 망치 렌더링
- */
 function renderHammer(w) {
   const anim = animations.hammer;
   ctx.save();
-
   const progress = Math.min(1, anim.progress);
-  // Easing: easeInOutQuad
-  const easeProgress = progress < 0.5
-    ? 2 * progress * progress
-    : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+  const easeProgress = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
 
   const hammerY = anim.y - 80 + (easeProgress * 80);
   const hammerX = anim.x;
   ctx.globalAlpha = 1 - progress * 0.3;
 
-  // 손잡이
   ctx.strokeStyle = '#8B4513';
   ctx.lineWidth = 8;
   ctx.lineCap = 'round';
@@ -140,28 +136,21 @@ function renderHammer(w) {
   ctx.lineTo(hammerX, hammerY + 10);
   ctx.stroke();
 
-  // 망치 머리
   ctx.fillStyle = '#666';
   ctx.shadowColor = 'rgba(0,0,0,0.5)';
   ctx.shadowBlur = 10;
-  roundRectFill(ctx, hammerX - 20, hammerY - 50, 40, 20, 4);
-
+  roundRectFill(hammerX - 20, hammerY - 50, 40, 20, 4);
   ctx.restore();
 }
 
-/**
- * 기계팔 렌더링
- */
 function renderRobotArm(w) {
   const anim = animations.robotArm;
   ctx.save();
-
   const progress = Math.min(1, anim.progress);
   const armX = w + 50 - (progress * (w * 0.3 + 50));
   const armY = anim.y;
   ctx.globalAlpha = 1 - progress * 0.5;
 
-  // 팔
   ctx.strokeStyle = '#2b78ff';
   ctx.lineWidth = 10;
   ctx.lineCap = 'round';
@@ -170,7 +159,6 @@ function renderRobotArm(w) {
   ctx.lineTo(armX + 30, armY - 20);
   ctx.stroke();
 
-  // 집게
   ctx.strokeStyle = '#1440a6';
   ctx.lineWidth = 6;
   ctx.beginPath();
@@ -182,30 +170,28 @@ function renderRobotArm(w) {
   ctx.lineTo(armX + 20, armY - 30);
   ctx.stroke();
 
-  // 관절
   ctx.fillStyle = '#2b78ff';
   ctx.shadowColor = 'rgba(43,120,255,0.6)';
   ctx.shadowBlur = 15;
   ctx.beginPath();
   ctx.arc(armX + 30, armY - 20, 8, 0, Math.PI * 2);
   ctx.fill();
-
   ctx.restore();
 }
 
-/**
- * 둥근 사각형 채우기
- */
-function roundRectFill(ctx, x, y, w, h, r) {
+function roundRectFill(x, y, w, h, r) {
   ctx.beginPath();
-  roundedPath(ctx, x, y, w, h, r);
+  roundedPath(x, y, w, h, r);
   ctx.fill();
 }
 
-/**
- * 둥근 사각형 경로
- */
-function roundedPath(ctx, x, y, w, h, r) {
+function roundRectStroke(x, y, w, h, r) {
+  ctx.beginPath();
+  roundedPath(x, y, w, h, r);
+  ctx.stroke();
+}
+
+function roundedPath(x, y, w, h, r) {
   const rr = Math.min(r, w / 2, h / 2);
   ctx.moveTo(x + rr, y);
   ctx.arcTo(x + w, y, x + w, y + h, rr);

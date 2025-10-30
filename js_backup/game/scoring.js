@@ -1,32 +1,39 @@
 /**
  * 💯 점수 계산 시스템
  *
- * 판정과 점수를 계산합니다.
+ * 점수, 콤보, 판정을 계산합니다.
+ * AI한테 "점수 계산 바꿔줘" 하면 여기만 보면 됨!
  */
 
 import { SCORES, COMBO_BONUS_INTERVAL, COMBO_BONUS_PER_INTERVAL, JUDGE_COLORS } from '../config/settings.js';
 
 /**
- * 단계와 정답 여부로 판정 결정
+ * 단계로 판정 결정
  * @param {number} stage - 캐릭터 단계 (1, 2, 3)
- * @param {boolean} isCorrect - 올바른 액션인가?
- * @returns {string} 'PERFECT' | 'GOOD' | 'NOTBAD' | 'MISS'
+ * @param {boolean} isCorrectAction - 올바른 액션인가?
+ * @returns {string} 'PERFECT', 'GOOD', 'NOTBAD', 'MISS'
  */
-export function getJudgment(stage, isCorrect) {
-  // 오답이면 무조건 MISS
-  if (!isCorrect) return 'MISS';
+export function getJudgment(stage, isCorrectAction) {
+  // 틀린 액션이면 무조건 MISS
+  if (!isCorrectAction) {
+    return 'MISS';
+  }
 
-  // 단계별 판정
-  if (stage === 3) return 'PERFECT';
-  if (stage === 2) return 'GOOD';
-  if (stage === 1) return 'NOTBAD';
-
-  return 'MISS';
+  // 단계로 판정
+  if (stage === 3) {
+    return 'PERFECT';
+  } else if (stage === 2) {
+    return 'GOOD';
+  } else if (stage === 1) {
+    return 'NOTBAD';
+  } else {
+    return 'MISS';
+  }
 }
 
 /**
  * 판정에 따른 기본 점수
- * @param {string} judgment - 판정
+ * @param {string} judgment - 'PERFECT', 'GREAT', 'GOOD', 'MISS'
  * @returns {number} 점수
  */
 export function getBaseScore(judgment) {
@@ -40,6 +47,7 @@ export function getBaseScore(judgment) {
  */
 export function getComboBonus(combo) {
   // 10콤보마다 +10점
+  // 예: 15콤보 = 10점, 25콤보 = 20점
   return Math.floor(combo / COMBO_BONUS_INTERVAL) * COMBO_BONUS_PER_INTERVAL;
 }
 
@@ -65,7 +73,7 @@ export function getJudgmentColor(judgment) {
 }
 
 /**
- * 판정 텍스트 크기
+ * 판정 텍스트 크기 가져오기
  * @param {string} judgment - 판정
  * @returns {number} 폰트 크기 (픽셀)
  */
@@ -74,12 +82,12 @@ export function getJudgmentSize(judgment) {
 }
 
 /**
- * 올바른 액션인지 확인
- * @param {string} characterColor - 캐릭터 색상 ('red' | 'blue')
- * @param {string} action - 플레이어 액션 ('approve' | 'reject')
+ * 올바른 액션인지 체크
+ * @param {string} noteColor - 노트 색상 ('red' 또는 'blue')
+ * @param {string} action - 플레이어 액션 ('approve' 또는 'reject')
  * @returns {boolean}
  */
-export function isCorrectAction(characterColor, action) {
-  return (characterColor === 'blue' && action === 'approve') ||
-         (characterColor === 'red' && action === 'reject');
+export function isCorrectAction(noteColor, action) {
+  return (noteColor === 'blue' && action === 'approve') ||
+         (noteColor === 'red' && action === 'reject');
 }

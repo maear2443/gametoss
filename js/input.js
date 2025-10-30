@@ -1,8 +1,7 @@
 /**
- * 🎹 입력 처리
+ * ⌨️ 입력 처리 시스템
  *
- * 키보드와 버튼 입력을 관리합니다.
- * F키 = 거절, J키 = 승인, Space = 일시정지
+ * 키보드와 버튼 입력을 게임에 연결합니다.
  */
 
 /**
@@ -13,80 +12,66 @@
 export function setupInput(game, ui) {
   // 키보드 입력
   document.addEventListener('keydown', (e) => {
-    if (e.repeat) return;
-
-    if (e.code === 'Space') {
+    // F: 빨강 거절 (reject)
+    if (e.code === 'KeyF') {
+      game.handleAction('reject');
       e.preventDefault();
-      if (game.running) {
-        game.stop();
-        ui.$startBtn.textContent = 'Start';
-      } else {
+    }
+
+    // J: 파랑 승인 (approve)
+    if (e.code === 'KeyJ') {
+      game.handleAction('approve');
+      e.preventDefault();
+    }
+
+    // Space: 시작/정지
+    if (e.code === 'Space') {
+      if (!game.running) {
         game.start();
-        ui.$startBtn.textContent = 'Stop';
+      } else {
+        game.stop();
       }
-    } else if (e.code === 'KeyF') {
-      if (game.running) {
-        game.handleAction('reject');
-        flashButton(ui.$rejectBtn);
-      }
-    } else if (e.code === 'KeyJ') {
-      if (game.running) {
-        game.handleAction('approve');
-        flashButton(ui.$approveBtn);
-      }
+      e.preventDefault();
+    }
+
+    // R: 리셋
+    if (e.code === 'KeyR') {
+      game.reset();
+      e.preventDefault();
     }
   });
 
   // 버튼 클릭
   ui.$rejectBtn.addEventListener('click', () => {
-    if (game.running) {
-      game.handleAction('reject');
-      flashButton(ui.$rejectBtn);
-    }
+    game.handleAction('reject');
   });
 
   ui.$approveBtn.addEventListener('click', () => {
-    if (game.running) {
-      game.handleAction('approve');
-      flashButton(ui.$approveBtn);
-    }
+    game.handleAction('approve');
   });
 
-  // Start 버튼
   ui.$startBtn.addEventListener('click', () => {
-    if (!game.running) {
-      game.start();
-      ui.$startBtn.textContent = 'Stop';
-    } else {
-      game.stop();
-      ui.$startBtn.textContent = 'Start';
-    }
+    game.start();
   });
 
-  // Reset 버튼
+  ui.$stopBtn.addEventListener('click', () => {
+    game.stop();
+  });
+
   ui.$resetBtn.addEventListener('click', () => {
     game.reset();
-    ui.$startBtn.textContent = 'Start';
   });
 
-  // Restart 버튼 (결과 화면)
   ui.$restartBtn.addEventListener('click', () => {
     game.reset();
-    ui.$startBtn.textContent = 'Start';
   });
 
-  // BPM 입력
-  ui.$bpm.addEventListener('change', () => {
-    const newBpm = parseInt(ui.$bpm.value, 10);
+  // BPM 슬라이더
+  ui.$bpm.addEventListener('input', (e) => {
+    const newBpm = parseInt(e.target.value);
     game.updateTempo(newBpm);
+    ui.$bpmValue.textContent = newBpm;
   });
-}
 
-/**
- * 버튼 플래시 효과
- * @param {HTMLElement} btn - 버튼 요소
- */
-function flashButton(btn) {
-  btn.classList.add('active');
-  setTimeout(() => btn.classList.remove('active'), 100);
+  console.log('⌨️ Input system initialized');
 }

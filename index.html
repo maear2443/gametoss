@@ -10,21 +10,23 @@
   <div class="wrap">
     <!-- HUD: 점수, 콤보, 판정 -->
     <div class="hud">
-      <div class="score">Score: 0</div>
-      <div class="judge"></div>
-      <div class="combo">Combo: 0</div>
-      <div class="timer">1:00</div>
+      <div class="score" id="score">0</div>
+      <div class="judge" id="judge"></div>
+      <div class="combo" id="combo">0 COMBO</div>
+      <div class="timer" id="timer">1:00</div>
     </div>
 
     <!-- 게임 캔버스 -->
-    <canvas id="game" width="480" height="720" aria-label="리듬게임 캔버스"></canvas>
+    <canvas id="gameCanvas" width="480" height="720" aria-label="리듬게임 캔버스"></canvas>
 
     <!-- 컨트롤 패널 -->
     <div class="panel">
       <button id="startBtn">Start</button>
+      <button id="stopBtn" style="display:none;">Stop</button>
       <label style="display:flex;gap:8px;align-items:center;justify-content:center;">
         <span style="opacity:.8;font-weight:700;">BPM</span>
-        <input id="bpmInput" type="number" min="40" max="240" step="1" value="120" />
+        <input id="bpm" type="range" min="40" max="240" step="1" value="120" />
+        <span id="bpmValue">120</span>
       </label>
       <button id="resetBtn">Reset</button>
     </div>
@@ -41,12 +43,20 @@
     </div>
   </div>
 
+  <!-- 로딩 화면 -->
+  <div class="result-screen" id="loadingScreen">
+    <div class="result-content">
+      <h1>Loading...</h1>
+      <div class="stat" id="loadingText">Initializing...</div>
+    </div>
+  </div>
+
   <!-- 결과 화면 -->
   <div class="result-screen" id="resultScreen">
     <div class="result-content">
       <h1>게임 종료!</h1>
-      <div class="stat" id="finalScore">Score: 0</div>
-      <div class="stat" id="maxCombo">Max Combo: 0</div>
+      <div class="stat">Score: <span id="finalScore">0</span></div>
+      <div class="stat">Max Combo: <span id="maxCombo">0</span></div>
       <button id="restartBtn">다시 시작</button>
     </div>
   </div>

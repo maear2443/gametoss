@@ -1,8 +1,8 @@
 /**
  * 🎭 Character 클래스
  *
- * 진화하는 캐릭터를 관리합니다.
- * Stage 1 → Stage 2 → Stage 3로 변화합니다.
+ * 변화하는 인형 캐릭터를 나타냅니다.
+ * 1단계 → 2단계 → 3단계로 변화하며, 각 단계마다 다른 이미지를 표시합니다.
  */
 
 import { CHARACTER_SIZE, STAGE_DURATIONS, COLORS } from '../config/settings.js';
@@ -10,48 +10,55 @@ import { CHARACTER_SIZE, STAGE_DURATIONS, COLORS } from '../config/settings.js';
 export class Character {
   /**
    * 캐릭터 생성
-   * @param {string} color - 'red' | 'blue'
-   * @param {string} characterType - 'bear', 'cat', 'rabbit', 'dog', 'fox'
+   * @param {string} color - 'red' 또는 'blue'
+   * @param {string} characterType - 캐릭터 종류 ('bear', 'cat', etc)
    * @param {number} spawnTime - 생성 시간 (초)
-   * @param {number} position - 화면 위치 (0-6)
-   * @param {number} bpm - BPM
-   * @param {Object} images - {stage1, stage2, stage3}
+   * @param {number} position - 화면에서의 위치 (0-6)
+   * @param {number} bpm - 현재 BPM
+   * @param {Object} images - 이미지 객체 {stage1, stage2, stage3}
    */
   constructor(color, characterType, spawnTime, position, bpm, images) {
-    this.color = color;
-    this.characterType = characterType;
-    this.spawnTime = spawnTime;
-    this.position = position;
-    this.bpm = bpm;
-    this.images = images;
+    this.color = color;                 // 'red' 또는 'blue'
+    this.characterType = characterType; // 'bear', 'cat', etc
+    this.spawnTime = spawnTime;         // 생성 시간
+    this.position = position;           // 위치 (0-6)
+    this.bpm = bpm;                     // BPM
 
-    // 단계별 종료 시간 계산
-    const beatDuration = 60 / bpm;  // 1비트 = 몇 초?
+    // 이미지
+    this.images = images || { stage1: null, stage2: null, stage3: null };
+
+    // 단계 타이밍 계산 (비트 → 초)
+    const beatDuration = 60 / this.bpm;
     this.stage1EndTime = spawnTime + (STAGE_DURATIONS.stage1 * beatDuration);
     this.stage2EndTime = this.stage1EndTime + (STAGE_DURATIONS.stage2 * beatDuration);
     this.stage3EndTime = this.stage2EndTime + (STAGE_DURATIONS.stage3 * beatDuration);
 
     // 상태
-    this.judged = false;    // 판정되었는가?
-    this.result = null;     // 판정 결과
+    this.judged = false;  // 판정되었나?
+    this.result = null;   // 판정 결과
   }
 
   /**
-   * 현재 단계 가져오기
+   * 현재 단계 계산
    * @param {number} currentTime - 현재 시간 (초)
-   * @returns {number} 1, 2, 3, 또는 4 (4 = 시간 초과)
+   * @returns {number} 1, 2, 3, 또는 4 (4는 시간 초과)
    */
   getStage(currentTime) {
-    if (currentTime < this.stage1EndTime) return 1;
-    if (currentTime < this.stage2EndTime) return 2;
-    if (currentTime < this.stage3EndTime) return 3;
-    return 4; // 시간 초과
+    if (currentTime < this.stage1EndTime) {
+      return 1;
+    } else if (currentTime < this.stage2EndTime) {
+      return 2;
+    } else if (currentTime < this.stage3EndTime) {
+      return 3;
+    } else {
+      return 4; // 시간 초과 (MISS 처리)
+    }
   }
 
   /**
-   * 현재 단계에 맞는 이미지
+   * 현재 이미지 가져오기
    * @param {number} currentTime - 현재 시간
-   * @returns {Image | null}
+   * @returns {Image|null}
    */
   getImage(currentTime) {
     const stage = this.getStage(currentTime);
@@ -62,9 +69,9 @@ export class Character {
   }
 
   /**
-   * 현재 단계 내 진행률 (0.0 ~ 1.0)
+   * 단계 진행률 (펄스 효과용)
    * @param {number} currentTime - 현재 시간
-   * @returns {number}
+   * @returns {number} 0.0 ~ 1.0
    */
   getStageProgress(currentTime) {
     const stage = this.getStage(currentTime);
@@ -95,7 +102,7 @@ export class Character {
     const progress = this.getStageProgress(currentTime);
     const stage = this.getStage(currentTime);
 
-    // Stage 3일 때 강하게 펄스
+    // stage3일 때 더 강하게 펄스
     if (stage === 3) {
       return 1 + Math.sin(progress * Math.PI * 8) * 0.1;
     } else if (stage === 2) {
@@ -132,19 +139,21 @@ export class Character {
     }
 
     // 이미지 그리기
-    if (img && img.complete && img.naturalWidth > 0) {
+    if (img && img.complete) {
       const imgWidth = 64 * pulse;
       const imgHeight = 48 * pulse;
       ctx.drawImage(img, x - imgWidth / 2, y - imgHeight / 2, imgWidth, imgHeight);
     } else {
-      // Fallback: 박스 그리기
-      const size = CHARACTER_SIZE * pulse * 1.5;
-      ctx.fillStyle = COLORS[this.color];
+      // 이미지 없으면 기본 박스 (더 크고 명확하게)
+      const size = CHARACTER_SIZE * pulse * 1.5; // 1.5배 크게
+      const baseColor = COLORS[this.color];
+
+      ctx.fillStyle = baseColor;
       this._roundRectFill(ctx, x - size / 2, y - size / 2, size, size, 10);
 
       ctx.shadowBlur = 0;
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 3; // 두껍게
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)'; // 더 밝게
       this._roundRectStroke(ctx, x - size / 2, y - size / 2, size, size, 10);
 
       // 캐릭터 타입 표시
@@ -155,7 +164,7 @@ export class Character {
       ctx.fillText(this.characterType.substring(0, 3).toUpperCase(), x, y - 10);
     }
 
-    // 단계 번호 표시
+    // 단계 표시 (작은 숫자)
     if (!this.judged && stage <= 3) {
       ctx.shadowBlur = 0;
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
@@ -177,15 +186,16 @@ export class Character {
   }
 
   /**
-   * 제거해야 하는가?
+   * 시간 초과로 제거되어야 하나?
    * @param {number} currentTime - 현재 시간
    * @returns {boolean}
    */
   shouldRemove(currentTime) {
+    // 판정되거나, 3단계가 끝나고 1초 후
     return this.judged || (currentTime > this.stage3EndTime + 1);
   }
 
-  // 헬퍼 함수들
+  // 내부 헬퍼 함수들
   _roundRectFill(ctx, x, y, w, h, r) {
     ctx.beginPath();
     this._roundedPath(ctx, x, y, w, h, r);

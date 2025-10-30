@@ -1,12 +1,13 @@
 /**
  * 🔨 애니메이션 시스템
  *
- * 망치와 기계팔 애니메이션
+ * 망치와 기계팔 애니메이션을 관리합니다.
+ * 속도를 바꾸려면 settings.js의 ANIMATION_SPEED를 수정하세요!
  */
 
 import { ANIMATION_SPEED } from '../config/settings.js';
 
-// 애니메이션 저장소
+// 애니메이션 상태
 export const animations = {
   hammer: {
     active: false,
@@ -23,11 +24,11 @@ export const animations = {
 };
 
 /**
- * 망치 애니메이션 시작 (red 캐릭터용)
+ * 망치 애니메이션 시작 (거절 시)
  * @param {number} x - X 좌표
  * @param {number} y - Y 좌표
  */
-export function triggerHammer(x, y) {
+export function startHammer(x, y) {
   animations.hammer.active = true;
   animations.hammer.progress = 0;
   animations.hammer.x = x;
@@ -35,11 +36,11 @@ export function triggerHammer(x, y) {
 }
 
 /**
- * 기계팔 애니메이션 시작 (blue 캐릭터용)
+ * 기계팔 애니메이션 시작 (승인 시)
  * @param {number} x - X 좌표
  * @param {number} y - Y 좌표
  */
-export function triggerRobotArm(x, y) {
+export function startRobotArm(x, y) {
   animations.robotArm.active = true;
   animations.robotArm.progress = 0;
   animations.robotArm.x = x;
@@ -51,7 +52,7 @@ export function triggerRobotArm(x, y) {
  * @param {number} dt - 델타 타임 (초)
  */
 export function updateAnimations(dt) {
-  // 망치
+  // 망치 애니메이션
   if (animations.hammer.active) {
     animations.hammer.progress += dt * ANIMATION_SPEED.HAMMER;
     if (animations.hammer.progress >= 1) {
@@ -59,7 +60,7 @@ export function updateAnimations(dt) {
     }
   }
 
-  // 기계팔
+  // 기계팔 애니메이션
   if (animations.robotArm.active) {
     animations.robotArm.progress += dt * ANIMATION_SPEED.ROBOT_ARM;
     if (animations.robotArm.progress >= 1) {
@@ -73,7 +74,5 @@ export function updateAnimations(dt) {
  */
 export function resetAnimations() {
   animations.hammer.active = false;
-  animations.hammer.progress = 0;
   animations.robotArm.active = false;
-  animations.robotArm.progress = 0;
 }

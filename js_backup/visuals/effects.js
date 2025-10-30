@@ -1,20 +1,22 @@
 /**
  * ✨ 이펙트 시스템
  *
- * 파티클, 플래시, 플로팅 텍스트 등
+ * 파티클, 플래시, 링, 플로팅 텍스트 등
+ * 화려한 시각 효과를 여기서 관리!
  */
 
 import { GRAVITY, PARTICLE_COUNT } from '../config/settings.js';
 
 // 이펙트 저장소
 export const effects = {
-  hitFlash: { a: 0, color: '#ffffff' },
-  particles: [],
-  floatTexts: []
+  hitFlash: { a: 0, color: '#ffffff' },  // 라인 플래시
+  ring: { a: 0, r: 0, color: '#ffffff' }, // 확산 링
+  particles: [],      // 파티클 배열
+  floatTexts: []      // 플로팅 텍스트 배열
 };
 
 /**
- * 화면 플래시 시작
+ * 히트 플래시 시작
  * @param {string} color - 색상
  */
 export function startHitFlash(color) {
@@ -23,24 +25,34 @@ export function startHitFlash(color) {
 }
 
 /**
+ * 확산 링 시작
+ * @param {string} color - 색상
+ */
+export function startRing(color) {
+  effects.ring.a = 1.0;
+  effects.ring.r = 0;
+  effects.ring.color = color;
+}
+
+/**
  * 파티클 생성
  * @param {number} x - X 좌표
  * @param {number} y - Y 좌표
- * @param {string} judgment - 판정
+ * @param {string} judgment - 판정 ('PERFECT', 'GREAT', 'GOOD')
  * @param {string} color - 색상
  */
 export function createParticles(x, y, judgment, color) {
   const count = PARTICLE_COUNT[judgment] || 12;
 
   for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = 180 + Math.random() * 200; // px/s
+    const ang = Math.random() * Math.PI * 2;
+    const spd = 180 + Math.random() * 200; // px/s
 
     effects.particles.push({
       x,
       y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - 120, // 위로 튀어오르기
+      vx: Math.cos(ang) * spd,
+      vy: Math.sin(ang) * spd - 120,
       life: 0.7 + Math.random() * 0.5,
       a: 1,
       color
@@ -60,7 +72,7 @@ export function createFloatText(x, y, text, color, size) {
   effects.floatTexts.push({
     x,
     y,
-    vy: -60, // px/s (위로)
+    vy: -60, // px/s
     life: 0.85,
     a: 1,
     text,
@@ -74,9 +86,15 @@ export function createFloatText(x, y, text, color, size) {
  * @param {number} dt - 델타 타임 (초)
  */
 export function updateEffects(dt) {
-  // 플래시 페이드
+  // 히트 플래시 페이드
   if (effects.hitFlash.a > 0) {
     effects.hitFlash.a = Math.max(0, effects.hitFlash.a - dt * 2.5);
+  }
+
+  // 확산 링
+  if (effects.ring.a > 0) {
+    effects.ring.r += dt * 260;
+    effects.ring.a = Math.max(0, effects.ring.a - dt * 2.0);
   }
 
   // 파티클 업데이트
@@ -84,7 +102,7 @@ export function updateEffects(dt) {
     const p = effects.particles[i];
     p.life -= dt;
     p.a = Math.max(0, p.life / 1.0);
-    p.vy += GRAVITY * dt;  // 중력 적용
+    p.vy += GRAVITY * dt;
     p.x += p.vx * dt;
     p.y += p.vy * dt;
 
@@ -111,6 +129,8 @@ export function updateEffects(dt) {
  */
 export function resetEffects() {
   effects.hitFlash.a = 0;
+  effects.ring.a = 0;
+  effects.ring.r = 0;
   effects.particles.length = 0;
   effects.floatTexts.length = 0;
 }

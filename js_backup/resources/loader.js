@@ -1,12 +1,13 @@
 /**
  * 📦 리소스 로더
  *
- * 이미지, 음악, 효과음을 로드합니다.
+ * 이미지, 사운드, 음악 파일을 불러옵니다.
+ * AI한테 "음악 볼륨 바꿔줘" 하면 여기 보면 됨!
  */
 
 import { PATHS, SOUND_VOLUME, MUSIC_VOLUME } from '../config/settings.js';
 
-// 캐릭터 타입
+// 캐릭터 종류
 const CHARACTER_TYPES = ['bear', 'cat', 'rabbit', 'dog', 'fox'];
 
 // 리소스 저장소
@@ -14,6 +15,7 @@ export const resources = {
   charactersData: null,
   playlistData: null,
   soundsData: null,
+  // 새로운 구조: color -> characterType -> stage -> image
   characterImages: {
     red: {},
     blue: {}
@@ -28,46 +30,41 @@ export const resources = {
  */
 export async function loadAllResources() {
   try {
-    // JSON 파일 로드
     const [charactersRes, playlistRes, soundsRes] = await Promise.all([
-      fetch(PATHS.CHARACTERS_JSON).catch(() => ({ ok: false })),
-      fetch(PATHS.PLAYLIST_JSON).catch(() => ({ ok: false })),
-      fetch(PATHS.SOUNDS_JSON).catch(() => ({ ok: false }))
+      fetch(PATHS.CHARACTERS_JSON),
+      fetch(PATHS.PLAYLIST_JSON),
+      fetch(PATHS.SOUNDS_JSON)
     ]);
 
-    if (charactersRes.ok) resources.charactersData = await charactersRes.json();
-    if (playlistRes.ok) resources.playlistData = await playlistRes.json();
-    if (soundsRes.ok) resources.soundsData = await soundsRes.json();
+    resources.charactersData = await charactersRes.json();
+    resources.playlistData = await playlistRes.json();
+    resources.soundsData = await soundsRes.json();
 
-    // 이미지와 사운드 로드
     await preloadImages();
     await preloadSounds();
 
-    console.log('✅ 리소스 로드 완료');
+    console.log('✅ All resources loaded');
     return true;
   } catch (error) {
-    console.error('❌ 리소스 로드 실패:', error);
+    console.error('❌ Failed to load resources:', error);
     return false;
   }
 }
 
-/**
- * 이미지 프리로드
- */
 async function preloadImages() {
   const loadImage = (src) => {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => resolve(img);
       img.onerror = () => {
-        console.warn(`⚠️ 이미지 로드 실패: ${src}`);
+        console.warn(`⚠️  Failed: ${src}`);
         resolve(null);
       };
       img.src = src;
     });
   };
 
-  // 각 캐릭터, 색상, 단계별로 로드
+  // 각 캐릭터, 색상, 단계별로 이미지 로드
   for (const color of ['red', 'blue']) {
     for (const charType of CHARACTER_TYPES) {
       resources.characterImages[color][charType] = {
@@ -78,18 +75,14 @@ async function preloadImages() {
 
       for (const stage of [1, 2, 3]) {
         const path = `${PATHS[`IMAGES_${color.toUpperCase()}`]}${charType}_stage${stage}.png`;
-        const img = await loadImage(path);
-        resources.characterImages[color][charType][`stage${stage}`] = img;
+        resources.characterImages[color][charType][`stage${stage}`] = await loadImage(path);
       }
     }
   }
 
-  console.log('✅ 캐릭터 이미지 로드 완료');
+  console.log('✅ Character images loaded');
 }
 
-/**
- * 사운드 프리로드
- */
 async function preloadSounds() {
   if (!resources.soundsData) return;
 
@@ -98,7 +91,7 @@ async function preloadSounds() {
       const audio = new Audio(`${PATHS.SOUNDS}${file}`);
       audio.volume = SOUND_VOLUME;
       audio.onerror = () => {
-        console.warn(`⚠️ 사운드 로드 실패: ${file}`);
+        console.warn(`⚠️  Failed: ${file}`);
         resolve(null);
       };
       audio.oncanplaythrough = () => resolve(audio);
@@ -113,14 +106,23 @@ async function preloadSounds() {
   results.forEach(({ name, audio }) => {
     if (audio) resources.soundEffects[name] = audio;
   });
-
-  console.log('✅ 효과음 로드 완료');
 }
 
 /**
- * 랜덤 캐릭터 데이터
- * @param {string} color - 'red' | 'blue'
- * @returns {Object} { characterType, images: {stage1, stage2, stage3} }
+ * 효과음 재생
+ */
+export function playSound(soundName) {
+  const sound = resources.soundEffects[soundName];
+  if (sound) {
+    sound.currentTime = 0;
+    sound.play().catch(e => console.warn(`⚠️  Sound failed: ${soundName}`, e));
+  }
+}
+
+/**
+ * 랜덤 캐릭터 데이터 (타입 + stage 이미지들)
+ * @param {string} color - 'red' 또는 'blue'
+ * @returns {Object} { characterType, images: { stage1, stage2, stage3 } }
  */
 export function getRandomCharacter(color) {
   const randomType = CHARACTER_TYPES[Math.floor(Math.random() * CHARACTER_TYPES.length)];
@@ -137,39 +139,26 @@ export function getRandomCharacter(color) {
  */
 export function selectRandomSong() {
   if (!resources.playlistData || !resources.playlistData.songs || resources.playlistData.songs.length === 0) {
-    console.warn('⚠️ 플레이리스트 없음');
+    console.warn('⚠️  No songs available');
     return null;
   }
 
   const randomIndex = Math.floor(Math.random() * resources.playlistData.songs.length);
   resources.currentSong = resources.playlistData.songs[randomIndex];
 
-  // 기존 음악 정리
   if (resources.currentAudio) {
     resources.currentAudio.pause();
     resources.currentAudio.currentTime = 0;
   }
 
-  // 새 음악 로드
   resources.currentAudio = new Audio(`${PATHS.MUSIC}${resources.currentSong.file}`);
   resources.currentAudio.volume = MUSIC_VOLUME;
   resources.currentAudio.onerror = () => {
-    console.warn(`⚠️ 음악 로드 실패: ${resources.currentSong.file}`);
+    console.warn(`⚠️  Failed: ${resources.currentSong.file}`);
   };
 
-  console.log(`🎵 음악 선택: ${resources.currentSong.name} (${resources.currentSong.bpm} BPM)`);
+  console.log(`🎵 Selected: ${resources.currentSong.name} (${resources.currentSong.bpm} BPM)`);
   return resources.currentSong;
-}
-
-/**
- * 효과음 재생
- */
-export function playSound(soundName) {
-  const sound = resources.soundEffects[soundName];
-  if (sound) {
-    sound.currentTime = 0;
-    sound.play().catch(e => console.warn(`⚠️ 효과음 재생 실패: ${soundName}`, e));
-  }
 }
 
 /**
@@ -177,7 +166,7 @@ export function playSound(soundName) {
  */
 export function playMusic() {
   if (resources.currentAudio) {
-    resources.currentAudio.play().catch(e => console.warn('⚠️ 음악 재생 실패:', e));
+    resources.currentAudio.play().catch(e => console.warn('⚠️  Music play failed:', e));
   }
 }
 
