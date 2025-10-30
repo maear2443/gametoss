@@ -5,7 +5,7 @@
  * 캐릭터 생성, 판정, 점수 계산, 타이머 등
  */
 
-import { GAME_DURATION, DEFAULT_BPM, MAX_CHARACTERS } from '../config/settings.js';
+import { GAME_DURATION, DEFAULT_BPM, MAX_CHARACTERS, STAGE_DURATIONS } from '../config/settings.js';
 import { Character } from './Character.js';
 import { getJudgment, calculateFinalScore, getJudgmentColor, getJudgmentSize, isCorrectAction } from './scoring.js';
 import { render } from '../visuals/renderer.js';
@@ -45,14 +45,19 @@ export class Game {
     if (song) {
       this.bpm = song.bpm;
       this.ui.$bpm.value = this.bpm;
+
+      // 기존 캐릭터들의 BPM 업데이트
+      this.updateAllCharactersBPM(this.bpm);
     }
 
     this.running = true;
     this.startTime = performance.now() / 1000;
     this.lastTime = this.startTime;
 
-    // 초기 캐릭터 생성 (7개)
-    this.fillCharacters();
+    // 캐릭터가 없으면 생성 (보통은 reset에서 이미 생성됨)
+    if (this.characters.length === 0) {
+      this.fillCharacters();
+    }
 
     playMusic();
     this.gameLoop(performance.now());
@@ -82,10 +87,12 @@ export class Game {
     this.combo = 0;
     this.maxCombo = 0;
     this.timeRemaining = GAME_DURATION;
+    this.startTime = 0;
+    this.lastTime = 0;
     this.characters = [];
 
-    // 초기 캐릭터 생성
-    this.fillCharacters();
+    // 초기 캐릭터 생성 (시간 0 기준)
+    this.fillCharactersAtTime(0);
 
     // UI 업데이트
     this.updateHUD();
@@ -116,7 +123,13 @@ export class Game {
    */
   fillCharacters() {
     const currentTime = this.getNowSec();
+    this.fillCharactersAtTime(currentTime);
+  }
 
+  /**
+   * 특정 시간 기준으로 캐릭터 채우기
+   */
+  fillCharactersAtTime(spawnTime) {
     while (this.characters.length < MAX_CHARACTERS) {
       const color = Math.random() < 0.5 ? 'red' : 'blue';
       const charData = getRandomCharacter(color);
@@ -125,13 +138,28 @@ export class Game {
       const character = new Character(
         color,
         charData.characterType,
-        currentTime,
+        spawnTime,
         position,
         this.bpm,
         charData.images
       );
 
       this.characters.push(character);
+    }
+  }
+
+  /**
+   * 모든 캐릭터의 BPM 업데이트 (타이밍 재계산)
+   */
+  updateAllCharactersBPM(newBpm) {
+    for (const char of this.characters) {
+      char.bpm = newBpm;
+
+      // 타이밍 재계산
+      const beatDuration = 60 / newBpm;
+      char.stage1EndTime = char.spawnTime + (STAGE_DURATIONS.stage1 * beatDuration);
+      char.stage2EndTime = char.stage1EndTime + (STAGE_DURATIONS.stage2 * beatDuration);
+      char.stage3EndTime = char.stage2EndTime + (STAGE_DURATIONS.stage3 * beatDuration);
     }
   }
 
