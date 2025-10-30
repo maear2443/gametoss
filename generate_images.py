@@ -31,8 +31,8 @@ EMOJIS = {
     'fox': '🦊'
 }
 
-def create_character_image(character, color_name, output_path):
-    """Create a simple character image with emoji"""
+def create_character_image(character, color_name, stage, output_path):
+    """Create a simple character image with emoji (stage 1, 2, or 3)"""
     color = COLORS[color_name]
 
     # Create image with transparency
@@ -45,13 +45,22 @@ def create_character_image(character, color_name, output_path):
     g = int(color[3:5], 16)
     b = int(color[5:7], 16)
 
+    # Stage별로 밝기 조정 (1 = 어두움, 2 = 중간, 3 = 밝음)
+    brightness_factor = 0.5 + (stage * 0.25)  # 0.75, 1.0, 1.25
+    r = min(255, int(r * brightness_factor))
+    g = min(255, int(g * brightness_factor))
+    b = min(255, int(b * brightness_factor))
+
+    # Stage별로 테두리 두께 다르게
+    outline_width = stage  # 1, 2, 3
+
     # Draw rounded rectangle background
     draw.rounded_rectangle(
         [(2, 2), (WIDTH-2, HEIGHT-2)],
         radius=8,
         fill=(r, g, b, 255),
-        outline=(255, 255, 255, 100),
-        width=2
+        outline=(255, 255, 255, 150),
+        width=outline_width
     )
 
     # Try to add emoji text
@@ -100,17 +109,21 @@ def create_character_image(character, color_name, output_path):
     print(f"Created: {output_path}")
 
 def main():
-    # Create images for each character and color
+    # Create images for each character, color, and stage
     for color_name in ['red', 'blue']:
         color_dir = f'assets/images/{color_name}'
         os.makedirs(color_dir, exist_ok=True)
 
         for character in CHARACTERS:
-            output_path = f'{color_dir}/{character}.png'
-            create_character_image(character, color_name, output_path)
+            for stage in [1, 2, 3]:
+                output_path = f'{color_dir}/{character}_stage{stage}.png'
+                create_character_image(character, color_name, stage, output_path)
 
     print("\nAll placeholder images created successfully!")
-    print("You can replace these with your own custom character images.")
+    print("Stage 1: 어두움 (얇은 테두리)")
+    print("Stage 2: 중간 밝기 (중간 테두리)")
+    print("Stage 3: 밝음 (두꺼운 테두리)")
+    print("\nYou can replace these with your own custom character images.")
 
 if __name__ == '__main__':
     main()

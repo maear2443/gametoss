@@ -5,7 +5,7 @@
  * 노트, 이펙트, 애니메이션 등!
  */
 
-import { NOTE_SIZE, HIT_LINE_OFFSET, MAX_DPR } from '../config/settings.js';
+import { CHARACTER_SIZE, CHARACTER_SPACING, MAX_DPR } from '../config/settings.js';
 import { effects } from './effects.js';
 import { animations } from './animations.js';
 
@@ -16,9 +16,9 @@ const W = () => canvas.clientWidth || 480;
 const H = () => canvas.clientHeight || 720;
 
 /**
- * 렌더러 초기화
+ * 캔버스 초기화
  */
-export function initRenderer(canvasElement) {
+export function initCanvas(canvasElement) {
   canvas = canvasElement;
   ctx = canvas.getContext('2d', { alpha: true });
 
@@ -29,6 +29,9 @@ export function initRenderer(canvasElement) {
 
   return { canvas, ctx };
 }
+
+// 별칭
+export const initRenderer = initCanvas;
 
 /**
  * 캔버스 크기 조정
@@ -44,13 +47,14 @@ function fitCanvas() {
 
 /**
  * 메인 렌더 함수
+ * @param {Array} characters - 캐릭터 배열
+ * @param {number} currentTime - 현재 시간
  */
-export function render(notes, currentTime) {
+export function render(characters, currentTime) {
   fitCanvas();
   const w = W();
   const h = H();
-  const hitY = h - HIT_LINE_OFFSET;
-  const laneX = w * 0.5;
+  const centerX = w * 0.5;
 
   ctx.clearRect(0, 0, w, h);
 
@@ -61,48 +65,21 @@ export function render(notes, currentTime) {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
 
-  // 라인 플래시
+  // 플래시 효과
   if (effects.hitFlash.a > 0) {
     ctx.save();
-    ctx.globalAlpha = effects.hitFlash.a * 0.45;
+    ctx.globalAlpha = effects.hitFlash.a * 0.3;
     ctx.fillStyle = effects.hitFlash.color;
-    ctx.fillRect(0, hitY - 4, w, 8);
+    ctx.fillRect(0, 0, w, h);
     ctx.restore();
   }
 
-  // 판정 라인
-  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, hitY);
-  ctx.lineTo(w, hitY);
-  ctx.stroke();
-
-  // 타겟 가이드 박스
-  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
-  ctx.lineWidth = 3;
-  roundRectStroke(laneX - NOTE_SIZE/2 - 8, hitY - NOTE_SIZE/2 - 8, NOTE_SIZE + 16, NOTE_SIZE + 16, 10);
-
-  // 확산 링
-  if (effects.ring.a > 0) {
-    ctx.save();
-    ctx.globalAlpha = effects.ring.a * 0.9;
-    ctx.strokeStyle = effects.ring.color;
-    ctx.lineWidth = 2.5;
-    roundRectStroke(
-      laneX - (NOTE_SIZE/2 + 8 + effects.ring.r/2),
-      hitY - (NOTE_SIZE/2 + 8 + effects.ring.r/2),
-      NOTE_SIZE + 16 + effects.ring.r,
-      NOTE_SIZE + 16 + effects.ring.r,
-      14
-    );
-    ctx.restore();
-  }
-
-  // 노트
-  for (const note of notes) {
-    const y = note.getY(currentTime, h);
-    note.draw(ctx, currentTime, laneX, y);
+  // 캐릭터들 (한 줄로 배치)
+  const startY = 100; // 시작 Y 위치
+  for (let i = 0; i < characters.length; i++) {
+    const character = characters[i];
+    const y = startY + (i * CHARACTER_SPACING);
+    character.draw(ctx, currentTime, centerX, y);
   }
 
   // 파티클

@@ -7,12 +7,19 @@
 
 import { PATHS, SOUND_VOLUME, MUSIC_VOLUME } from '../config/settings.js';
 
+// 캐릭터 종류
+const CHARACTER_TYPES = ['bear', 'cat', 'rabbit', 'dog', 'fox'];
+
 // 리소스 저장소
 export const resources = {
   charactersData: null,
   playlistData: null,
   soundsData: null,
-  characterImages: { red: [], blue: [] },
+  // 새로운 구조: color -> characterType -> stage -> image
+  characterImages: {
+    red: {},
+    blue: {}
+  },
   soundEffects: {},
   currentAudio: null,
   currentSong: null
@@ -57,17 +64,23 @@ async function preloadImages() {
     });
   };
 
-  if (resources.charactersData) {
-    const redPromises = resources.charactersData.red.map(file =>
-      loadImage(`${PATHS.IMAGES_RED}${file}`)
-    );
-    const bluePromises = resources.charactersData.blue.map(file =>
-      loadImage(`${PATHS.IMAGES_BLUE}${file}`)
-    );
+  // 각 캐릭터, 색상, 단계별로 이미지 로드
+  for (const color of ['red', 'blue']) {
+    for (const charType of CHARACTER_TYPES) {
+      resources.characterImages[color][charType] = {
+        stage1: null,
+        stage2: null,
+        stage3: null
+      };
 
-    resources.characterImages.red = await Promise.all(redPromises);
-    resources.characterImages.blue = await Promise.all(bluePromises);
+      for (const stage of [1, 2, 3]) {
+        const path = `${PATHS[`IMAGES_${color.toUpperCase()}`]}${charType}_stage${stage}.png`;
+        resources.characterImages[color][charType][`stage${stage}`] = await loadImage(path);
+      }
+    }
   }
+
+  console.log('✅ Character images loaded');
 }
 
 async function preloadSounds() {
@@ -107,17 +120,18 @@ export function playSound(soundName) {
 }
 
 /**
- * 랜덤 캐릭터 이미지
+ * 랜덤 캐릭터 데이터 (타입 + stage 이미지들)
+ * @param {string} color - 'red' 또는 'blue'
+ * @returns {Object} { characterType, images: { stage1, stage2, stage3 } }
  */
-export function getRandomCharacterImage(color) {
-  const images = resources.characterImages[color];
-  if (!images || images.length === 0) return null;
+export function getRandomCharacter(color) {
+  const randomType = CHARACTER_TYPES[Math.floor(Math.random() * CHARACTER_TYPES.length)];
+  const images = resources.characterImages[color][randomType];
 
-  const validImages = images.filter(img => img !== null);
-  if (validImages.length === 0) return null;
-
-  const randomIndex = Math.floor(Math.random() * validImages.length);
-  return validImages[randomIndex];
+  return {
+    characterType: randomType,
+    images: images
+  };
 }
 
 /**

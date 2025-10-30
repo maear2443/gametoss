@@ -5,27 +5,27 @@
  * AI한테 "점수 계산 바꿔줘" 하면 여기만 보면 됨!
  */
 
-import { WINDOWS_MS, SCORES, COMBO_BONUS_INTERVAL, COMBO_BONUS_PER_INTERVAL, JUDGE_COLORS } from '../config/settings.js';
+import { SCORES, COMBO_BONUS_INTERVAL, COMBO_BONUS_PER_INTERVAL, JUDGE_COLORS } from '../config/settings.js';
 
 /**
- * 타이밍 차이로 판정 결정
- * @param {number} timingDiff - 시간 차이 (밀리초)
+ * 단계로 판정 결정
+ * @param {number} stage - 캐릭터 단계 (1, 2, 3)
  * @param {boolean} isCorrectAction - 올바른 액션인가?
- * @returns {string} 'PERFECT', 'GREAT', 'GOOD', 'MISS'
+ * @returns {string} 'PERFECT', 'GOOD', 'NOTBAD', 'MISS'
  */
-export function getJudgment(timingDiff, isCorrectAction) {
+export function getJudgment(stage, isCorrectAction) {
   // 틀린 액션이면 무조건 MISS
   if (!isCorrectAction) {
     return 'MISS';
   }
 
-  // 타이밍으로 판정
-  if (timingDiff <= WINDOWS_MS.perfect) {
+  // 단계로 판정
+  if (stage === 3) {
     return 'PERFECT';
-  } else if (timingDiff <= WINDOWS_MS.great) {
-    return 'GREAT';
-  } else if (timingDiff <= WINDOWS_MS.good) {
+  } else if (stage === 2) {
     return 'GOOD';
+  } else if (stage === 1) {
+    return 'NOTBAD';
   } else {
     return 'MISS';
   }

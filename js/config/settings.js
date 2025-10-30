@@ -11,26 +11,25 @@ export const DEFAULT_BPM = 120;   // 기본 템포
 export const MIN_BPM = 40;        // 최소 템포
 export const MAX_BPM = 240;       // 최대 템포
 
-// 📦 노트 설정
-export const NOTE_SIZE = 48;           // 노트 크기 (픽셀)
-export const NOTE_START_Y = -100;      // 노트 시작 위치 (위로 더 올라가면 잘림 방지)
-export const HIT_LINE_OFFSET = 140;    // 판정 라인 위치 (하단에서부터)
-export const APPROACH_BEATS = 4;       // 노트가 떨어지는 비트 수
-export const SPAWN_PROBABILITY = 0.8;  // 노트 생성 확률 (0~1)
+// 📦 캐릭터 설정
+export const CHARACTER_SIZE = 48;          // 캐릭터 크기 (픽셀)
+export const MAX_CHARACTERS = 7;           // 화면에 표시될 최대 캐릭터 수
+export const CHARACTER_SPACING = 80;       // 캐릭터 간격 (픽셀)
 
-// ⚖️ 판정 윈도우 (밀리초) - 숫자가 클수록 쉬워짐!
-export const WINDOWS_MS = {
-  perfect: 50,   // ±50ms 이내 = PERFECT
-  great: 100,    // ±100ms 이내 = GREAT
-  good: 150      // ±150ms 이내 = GOOD
+// ⏱️ 단계 타이밍 (비트 단위) - BPM에 따라 자동 계산
+export const STAGE_DURATIONS = {
+  stage1: 2,  // 1단계 지속 시간 (2비트)
+  stage2: 2,  // 2단계 지속 시간 (2비트)
+  stage3: 2   // 3단계 지속 시간 (2비트)
 };
+// 총 6비트 = BPM 120일 때 3초
 
-// 💯 점수 설정
+// 💯 점수 설정 (단계별)
 export const SCORES = {
-  PERFECT: 300,  // PERFECT 판정 점수
-  GREAT: 200,    // GREAT 판정 점수
-  GOOD: 100,     // GOOD 판정 점수
-  MISS: 0        // MISS는 0점
+  PERFECT: 300,  // stage3에서 판정
+  GOOD: 200,     // stage2에서 판정
+  NOTBAD: 100,   // stage1에서 판정
+  MISS: 0        // 잘못된 버튼 or 시간 초과
 };
 
 // 🔥 콤보 보너스
@@ -46,17 +45,17 @@ export const COLORS = {
 
 // 🎨 판정 색상
 export const JUDGE_COLORS = {
-  PERFECT: '#ffea7a',  // 노란색
-  GREAT: '#9cffd7',    // 민트색
-  GOOD: '#b0c7ff',     // 하늘색
+  PERFECT: '#ffea7a',  // 노란색 (stage3)
+  GOOD: '#9cffd7',     // 민트색 (stage2)
+  NOTBAD: '#b0c7ff',   // 하늘색 (stage1)
   MISS: '#999'         // 회색
 };
 
 // ✨ 파티클 개수
 export const PARTICLE_COUNT = {
-  PERFECT: 24,  // PERFECT 판정 시 파티클 개수
-  GREAT: 18,    // GREAT 판정 시
-  GOOD: 12      // GOOD 판정 시
+  PERFECT: 24,  // PERFECT 판정 시 파티클 개수 (stage3)
+  GOOD: 18,     // GOOD 판정 시 (stage2)
+  NOTBAD: 12    // NOTBAD 판정 시 (stage1)
 };
 
 // 🔨 애니메이션 속도

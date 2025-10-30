@@ -64,6 +64,23 @@ canvas {
   text-shadow: 0 2px 8px rgba(0,0,0,0.45);
 }
 
+/* 판정 색상 */
+.judge.perfect {
+  color: #ffea7a;
+}
+
+.judge.good {
+  color: #9cffd7;
+}
+
+.judge.notbad {
+  color: #b0c7ff;
+}
+
+.judge.miss {
+  color: #999;
+}
+
 /* 타이머 */
 .timer {
   position: absolute;

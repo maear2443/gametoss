@@ -5,7 +5,7 @@
  * 게임을 시작하려면 여기부터 보세요!
  */
 
-import { loadAllResources } from './resources/loader.js';
+import { loadAllResources, selectRandomSong } from './resources/loader.js';
 import { initCanvas } from './visuals/renderer.js';
 import { Game } from './game/Game.js';
 import { setupInput } from './input.js';
@@ -40,6 +40,9 @@ async function init() {
   // 3️⃣ 리소스 로드 (이미지, 음악, 효과음)
   console.log('📦 리소스를 로드하는 중...');
   await loadAllResources();
+
+  // 랜덤 음악 선택
+  selectRandomSong();
 
   // 4️⃣ 게임 인스턴스 생성
   const game = new Game(ui);
