@@ -9,7 +9,7 @@ import { GAME_DURATION, DEFAULT_BPM, MAX_CHARACTERS, STAGE_DURATIONS } from '../
 import { Character } from './Character.js';
 import { getJudgment, calculateFinalScore, getJudgmentColor, getJudgmentSize, isCorrectAction } from './scoring.js';
 import { render } from '../visuals/renderer.js';
-import { updateEffects, createParticles, createFloatingText, createRing, createFlash, effects } from '../visuals/effects.js';
+import { updateEffects, createParticles, createFloatText, startRing, startHitFlash, effects } from '../visuals/effects.js';
 import { updateAnimations, triggerHammer, triggerRobotArm, animations } from '../visuals/animations.js';
 import { getRandomCharacter, playSound, playMusic, stopMusic, resetMusic, resources } from '../resources/loader.js';
 
@@ -219,13 +219,13 @@ export class Game {
     const y = 100; // 첫 번째 캐릭터 위치
     const color = getJudgmentColor(judgment);
 
-    createParticles(x, y, judgment, character.color);
-    createFlash(color);
-    createRing(color);
+    createParticles(x, y, judgment, color);
+    startHitFlash(color);
+    startRing(color);
 
     // 판정 텍스트
     const scoreText = finalScore > 0 ? `${judgment} +${finalScore}` : judgment;
-    createFloatingText(x, y, scoreText, color, getJudgmentSize(judgment));
+    createFloatText(x, y, scoreText, color, getJudgmentSize(judgment));
 
     // 애니메이션
     if (character.color === 'red') {
