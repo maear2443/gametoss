@@ -139,22 +139,29 @@ export class Character {
     }
 
     // 이미지 그리기
-    if (img) {
+    if (img && img.complete) {
       const imgWidth = 64 * pulse;
       const imgHeight = 48 * pulse;
       ctx.drawImage(img, x - imgWidth / 2, y - imgHeight / 2, imgWidth, imgHeight);
     } else {
-      // 이미지 없으면 기본 박스
-      const size = CHARACTER_SIZE * pulse;
+      // 이미지 없으면 기본 박스 (더 크고 명확하게)
+      const size = CHARACTER_SIZE * pulse * 1.5; // 1.5배 크게
       const baseColor = COLORS[this.color];
 
       ctx.fillStyle = baseColor;
       this._roundRectFill(ctx, x - size / 2, y - size / 2, size, size, 10);
 
       ctx.shadowBlur = 0;
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 3; // 두껍게
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)'; // 더 밝게
       this._roundRectStroke(ctx, x - size / 2, y - size / 2, size, size, 10);
+
+      // 캐릭터 타입 표시
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.font = 'bold 12px system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(this.characterType.substring(0, 3).toUpperCase(), x, y - 10);
     }
 
     // 단계 표시 (작은 숫자)

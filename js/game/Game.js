@@ -94,12 +94,15 @@ export class Game {
     // 초기 캐릭터 생성 (시간 0 기준)
     this.fillCharactersAtTime(0);
 
+    console.log(`🔄 Reset: Created ${this.characters.length} characters`);
+
     // UI 업데이트
     this.updateHUD();
     this.ui.$resultScreen.classList.remove('active');
 
     // 초기 렌더링
     render(this.characters, 0);
+    console.log(`🎨 Initial render complete`);
 
     resetMusic();
   }
